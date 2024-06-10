@@ -32,14 +32,6 @@ const AssignmentGroup = {
   ],
 };
 
-//
-const AssignmentInfo = {
-  id: 1,
-  name: 'Declare a Variable',
-  due_at: '2023-01-25',
-  points_possible: 50,
-};
-
 // The provided learner submission data.
 const LearnerSubmissions = [
   {
@@ -84,4 +76,4 @@ const LearnerSubmissions = [
   },
 ];
 
-function getLearnerData(CourseInfo, AssignmentGroup, [LearnerSubmissions]) {}
+function getLearnerData(id, avg, assignment) {}
