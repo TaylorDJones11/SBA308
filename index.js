@@ -76,4 +76,44 @@ const LearnerSubmissions = [
   },
 ];
 
-function getLearnerData(id, avg, assignment) {}
+//   Helper functions to calculate average
+function calculateScorePercentage(submission, assignment) {
+  return (submission.score / assignment.points_possible) * 100;
+}
+
+function getLearnerData(courseInfo, assignmentGroups, LearnerSubmissions) {
+  let result = [];
+  const currentDate = new Date();
+
+  try {
+    // Course valid?
+
+    assignmentGroups.forEach((group) => {
+      if (group.course_id !== courseInfo.id) {
+        throw new Error(
+          `Assignment group ${group.id} does not belong to course`
+        );
+      }
+    });
+  } catch (err) {
+    console.error('An error:', err.message);
+  }
+
+  // Get learner's id + info related to the id # - dont repeat if the id number is already there
+  for (const obj of LearnerSubmissions) {
+    if (obj.learner_id === id && !learnerObj[obj.learner_id]) {
+      learnerObj[obj.learner_id] = {
+        learner_id: obj.learner_id,
+        // avg: getAverage(),
+        // submissions: LearnerSubmissions.filter((sub) => sub.learner_id === id),
+      };
+      result.push(learnerObj[obj.learner_id]);
+    }
+  }
+
+  return result;
+}
+
+const results = getLearnerData(CourseInfo, AssignmentGroup, LearnerSubmissions);
+
+console.log(results);
