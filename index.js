@@ -81,34 +81,86 @@ function calculateScorePercentage(submission, assignment) {
   return (submission.score / assignment.points_possible) * 100;
 }
 
-function getLearnerData(courseInfo, assignmentGroups, LearnerSubmissions) {
+function getLearnerData(courseInfo, assignmentGroup, submissions) {
   let result = [];
   const currentDate = new Date();
 
   try {
-    // Course valid?
+    // Course validation
+    if (assignmentGroup.course_id !== courseInfo.id) {
+      throw new Error(
+        `Assignment group ${assignmentGroup.id} does not belong to course ${courseInfo.id}`
+      );
+    }
 
-    assignmentGroups.forEach((group) => {
-      if (group.course_id !== courseInfo.id) {
-        throw new Error(
-          `Assignment group ${group.id} does not belong to course`
-        );
+    // Assignments by ID
+    const assignmentsById = {};
+    assignmentGroup.assignments.forEach((assignment) => {
+      assignmentsById[assignment.id] = assignment;
+    });
+
+    // Group submissions by learner
+    const submissionsByLearner = {};
+    submissions.forEach((submission) => {
+      const { learner_id, assignment_id, submission: sub } = submission;
+      if (!submissionsByLearner[learner_id]) {
+        submissionsByLearner[learner_id] = [];
       }
+      submissionsByLearner[learner_id].push({ assignment_id, submission: sub });
+    });
+
+    // Calculate scores
+    Object.keys(submissionsByLearner).forEach((learnerId) => {
+      const learnerIdNum = parseInt(learnerId);
+      const learnerSubmissions = submissionsByLearner[learnerId];
+      const learnerResult = { id: learnerIdNum, avg: 0 };
+      let totalScore = 0;
+      let totalPointsPossible = 0;
+
+      learnerSubmissions.forEach(({ assignment_id, submission }) => {
+        const assignment = assignmentsById[assignment_id];
+
+        // Check to see if assignment is valid
+        if (!assignment) {
+          throw new Error(`Assignment ${assignment_id} not found`);
+        }
+
+        // Skip assignments not yet due
+        if (new Date(assignment.due_at) > currentDate) {
+          return;
+        }
+
+        // Check for points_possible being zero
+        if (assignment.points_possible === 0) {
+          throw new Error(
+            `Assignment ${assignment.id} has zero points possible`
+          );
+        }
+
+        // Late submission
+        let score = submission.score;
+        if (new Date(submission.submitted_at) > new Date(assignment.due_at)) {
+          score -= 10;
+        }
+
+        // Calculate score percentage
+        const scorePercentage = calculateScorePercentage(
+          submission,
+          assignment
+        );
+        learnerResult[assignment_id] = scorePercentage;
+        totalScore += submission.score;
+        totalPointsPossible += assignment.points_possible;
+      });
+
+      if (totalPointsPossible > 0) {
+        learnerResult.avg = totalScore / totalPointsPossible;
+      }
+
+      result.push(learnerResult);
     });
   } catch (err) {
     console.error('An error:', err.message);
-  }
-
-  // Get learner's id + info related to the id # - dont repeat if the id number is already there
-  for (const obj of LearnerSubmissions) {
-    if (obj.learner_id === id && !learnerObj[obj.learner_id]) {
-      learnerObj[obj.learner_id] = {
-        learner_id: obj.learner_id,
-        // avg: getAverage(),
-        // submissions: LearnerSubmissions.filter((sub) => sub.learner_id === id),
-      };
-      result.push(learnerObj[obj.learner_id]);
-    }
   }
 
   return result;
