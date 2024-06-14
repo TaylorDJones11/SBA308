@@ -119,6 +119,7 @@ function getLearnerData(courseInfo, assignmentGroup, submissions) {
       const learnerResult = { id: learnerIdNum, avg: 0 };
 
       // Initialize assignment scores
+      //  assignments: [{ id: 1, title: 'Assignment 1' },{ id: 2, title: 'Assignment 2' },{ id: 3, title: 'Assignment 3' }]
       assignmentGroup.assignments.forEach((assignment) => {
         learnerResult[assignment.id] = 0;
       });
@@ -126,41 +127,49 @@ function getLearnerData(courseInfo, assignmentGroup, submissions) {
       let totalScore = 0;
       let totalPointsPossible = 0;
 
-      learnerSubmissions.forEach(({ assignment_id, submission }) => {
-        const assignment = assignmentsById[assignment_id];
-
-        // Check to see if assignment is valid
-        if (!assignment) {
-          throw new Error(`Assignment ${assignment_id} not found`);
-        }
-
-        // Skip assignments not yet due in score calculation
-        if (new Date(assignment.due_at) > currentDate) {
-          return;
-        }
-
-        // Check for points_possible being zero
-        if (assignment.points_possible === 0) {
-          throw new Error(
-            `Assignment ${assignment.id} has zero points possible`
-          );
-        }
-
-        // Late submission penalty - Deduct 10 points
-        let score = submission.score;
-        if (new Date(submission.submitted_at) > new Date(assignment.due_at)) {
-          score -= 10;
-        }
-
-        // Calculate score percentage
-        const scorePercentage = calculateScorePercentage(
-          submission,
-          assignment
+      assignmentGroup.assignments.forEach((assignment) => {
+        const assignment_id = assignment.id;
+        const submission = learnerSubmissions.find(
+          (sub) => sub.assignment_id === assignment_id
         );
-        learnerResult[assignment_id] =
-          Math.round(scorePercentage * 1000) / 1000;
-        totalScore += score;
-        totalPointsPossible += assignment.points_possible;
+
+        if (submission) {
+          // Is this assignment valid?
+          if (!assignmentsById[assignment_id]) {
+            throw new Error(`Assignment ${assignment_id} not found`);
+          }
+
+          // Skip assignments not yet due
+          if (new Date(assignmentsById[assignment_id].due_at) > currentDate) {
+            return;
+          }
+
+          // Check for points_possible being zero
+          if (assignmentsById[assignment_id].points_possible === 0) {
+            throw new Error(
+              `Assignment ${assignment_id} has zero points possible`
+            );
+          }
+
+          // Late submission penalty - deduct 10 points
+          let score = submission.submission.score;
+          if (
+            new Date(submission.submission.submitted_at) >
+            new Date(assignmentsById[assignment_id].due_at)
+          ) {
+            score -= 10;
+          }
+
+          // Calculate score percentage with helper function
+          const scorePercentage = calculateScorePercentage(
+            submission.submission,
+            assignmentsById[assignment_id]
+          );
+          learnerResult[assignment_id] =
+            Math.round(scorePercentage * 1000) / 1000;
+          totalScore += score;
+          totalPointsPossible += assignmentsById[assignment_id].points_possible;
+        }
       });
 
       if (totalPointsPossible > 0) {
